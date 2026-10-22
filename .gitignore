@@ -41,5 +41,10 @@ dist/
 build/
 .vite/
 
-# ─── Local Docs (non-secret but local-only) ──────────────────────────────────
+# ─── Local Docs & Monitoring Binaries ──────────────────────────────────────────
 DEPLOYMENT_INSTRUCTIONS.txt
+monitoring_local/
+*.zip
+terraform/terraform.exe
+terraform/*.zip
+terraform/LICENSE.txt

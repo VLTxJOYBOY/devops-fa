@@ -81,11 +81,20 @@ resource "aws_security_group" "pulsecity" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-  # PulseCity frontend direct access
+  # PulseCity frontend / Grafana direct access
   ingress {
-    description = "Frontend"
+    description = "Frontend and Grafana"
     from_port   = 3000
     to_port     = 3000
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  # Prometheus
+  ingress {
+    description = "Prometheus"
+    from_port   = 9090
+    to_port     = 9090
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
@@ -122,6 +131,45 @@ resource "aws_instance" "pulsecity" {
     volume_size = 20
     volume_type = "gp3"
   }
+
+  user_data = <<-EOF
+              #!/bin/bash
+              set -e
+              exec > /var/log/pulsecity-bootstrap.log 2>&1
+
+              echo "=== 1. Setting up 2GB Swap ==="
+              fallocate -l 2G /swapfile
+              chmod 600 /swapfile
+              mkswap /swapfile
+              swapon /swapfile
+              echo '/swapfile none swap sw 0 0' >> /etc/fstab
+
+              echo "=== 2. Installing Docker & Git ==="
+              apt-get update -y
+              apt-get install -y docker.io docker-compose-v2 git curl
+              systemctl enable --now docker
+              usermod -aG docker ubuntu
+
+              echo "=== 3. Cloning PulseCity Repository ==="
+              mkdir -p /home/ubuntu/PulseCity
+              git clone https://github.com/VLTxJOYBOY/devops-fa.git /home/ubuntu/PulseCity
+              chown -R ubuntu:ubuntu /home/ubuntu/PulseCity
+
+              echo "=== 4. Setting up Backend Environment ==="
+              cat << 'ENVFILE' > /home/ubuntu/PulseCity/backend/.env
+PORT=5000
+MONGO_URI=mongodb+srv://om:OmPatil6268@cluster3.mongodb.net/pulsecity?retryWrites=true&w=majority
+JWT_SECRET=pulse_city_production_super_secret_jwt_key_2026_secured
+ENVFILE
+              chown ubuntu:ubuntu /home/ubuntu/PulseCity/backend/.env
+              chmod 600 /home/ubuntu/PulseCity/backend/.env
+
+              echo "=== 5. Launching PulseCity with Docker Compose ==="
+              cd /home/ubuntu/PulseCity
+              docker compose up -d --build
+
+              echo "=== PulseCity Startup Complete! ==="
+              EOF
 
   tags = {
     Name = "PulseCity-Server"
