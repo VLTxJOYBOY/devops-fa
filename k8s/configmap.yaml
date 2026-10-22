@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: pulsecity-config
+  namespace: pulsecity
+  labels:
+    app.kubernetes.io/name: pulsecity
+data:
+  PORT: "5000"
+  NODE_ENV: "production"

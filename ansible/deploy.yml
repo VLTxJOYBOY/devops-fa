@@ -1,0 +1,138 @@
+---
+- name: Configure PulseCity Server
+  hosts: webserver
+  become: true
+  gather_facts: true
+
+  tasks:
+
+    # 1. Update Ubuntu package cache
+    - name: Update apt cache
+      apt:
+        update_cache: yes
+        cache_valid_time: 3600
+
+    # 2. Install required packages
+    - name: Install required packages
+      apt:
+        name:
+          - git
+          - ca-certificates
+          - curl
+        state: present
+
+    # 3. Install Docker
+    - name: Install Docker
+      apt:
+        name:
+          - docker.io
+          - docker-compose-v2
+        state: present
+
+    # 4. Start Docker
+    - name: Start Docker service
+      service:
+        name: docker
+        state: started
+        enabled: true
+
+    # 5. Add ubuntu user to Docker group
+    - name: Add ubuntu user to docker group
+      user:
+        name: ubuntu
+        groups: docker
+        append: true
+
+    - name: Reset connection so docker group membership takes effect
+      meta: reset_connection
+
+    # 6. Login to GitHub Container Registry (ghcr.io)
+    - name: Login to ghcr.io
+      become_user: ubuntu
+      shell: echo "{{ ghcr_token }}" | docker login ghcr.io -u vltxjoyboy --password-stdin
+      args:
+        executable: /bin/bash
+
+    # 7. Clone application
+    - name: Clone PulseCity repository
+      git:
+        repo: "https://github.com/VLTxJOYBOY/devops-fa.git"
+        dest: /home/ubuntu/PulseCity
+        version: main
+        force: yes
+      become_user: ubuntu
+
+    # 8. Copy docker-compose.yml (uses pre-built ghcr.io images)
+    - name: Copy docker-compose.yml
+      copy:
+        src: /home/sensei/PulseCity/docker-compose.yml
+        dest: /home/ubuntu/PulseCity/docker-compose.yml
+        owner: ubuntu
+        group: ubuntu
+        mode: "0644"
+
+    # 9. Create backend environment file
+    - name: Create backend environment file
+      copy:
+        dest: /home/ubuntu/PulseCity/backend/.env
+        owner: ubuntu
+        group: ubuntu
+        mode: "0600"
+        content: |
+          PORT=5000
+          MONGO_URI={{ mongo_uri }}
+          JWT_SECRET={{ jwt_secret | default('<YOUR_JWT_SECRET>') }}
+
+    # 10. Create swap for small EC2 instance
+    - name: Check if swap exists
+      command: swapon --show
+      register: swap_status
+      changed_when: false
+
+    - name: Create 2GB swap file
+      command: fallocate -l 2G /swapfile
+      when: swap_status.stdout == ""
+
+    - name: Set swap file permissions
+      file:
+        path: /swapfile
+        owner: root
+        group: root
+        mode: "0600"
+      when: swap_status.stdout == ""
+
+    - name: Format swap file
+      command: mkswap /swapfile
+      when: swap_status.stdout == ""
+
+    - name: Enable swap
+      command: swapon /swapfile
+      when: swap_status.stdout == ""
+
+    - name: Make swap permanent
+      mount:
+        path: none
+        src: /swapfile
+        fstype: swap
+        opts: sw
+        state: present
+
+    # 11. Pull latest images and start application
+    - name: Pull latest images and start PulseCity
+      become_user: ubuntu
+      shell: cd /home/ubuntu/PulseCity && docker compose pull && docker compose up -d
+      args:
+        executable: /bin/bash
+
+    # 12. Show container status
+    - name: Show running containers
+      become_user: ubuntu
+      shell: cd /home/ubuntu/PulseCity && docker compose ps
+      args:
+        executable: /bin/bash
+      register: compose_status
+
+    # 13. Display status
+    - name: Display container status
+      debug:
+        var: compose_status.stdout

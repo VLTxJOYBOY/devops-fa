@@ -1,0 +1,36 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: pulsecity-backend
+  namespace: pulsecity
+  labels:
+    app.kubernetes.io/name: pulsecity
+    app.kubernetes.io/component: backend
+spec:
+  type: ClusterIP
+  ports:
+    - port: 5000
+      targetPort: 5000
+      protocol: TCP
+      name: http
+  selector:
+    app: pulsecity-backend
+---
+# Service alias named 'backend' to match Nginx proxy_pass (http://backend:5000)
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend
+  namespace: pulsecity
+  labels:
+    app.kubernetes.io/name: pulsecity
+    app.kubernetes.io/component: backend-alias
+spec:
+  type: ClusterIP
+  ports:
+    - port: 5000
+      targetPort: 5000
+      protocol: TCP
+      name: http
+  selector:
+    app: pulsecity-backend

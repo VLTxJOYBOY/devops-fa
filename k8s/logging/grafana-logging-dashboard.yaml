@@ -1,0 +1,85 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-pulsecity-logs
+  namespace: monitoring
+  labels:
+    app.kubernetes.io/name: grafana
+data:
+  pulsecity-logs-dashboard.json: |
+    {
+      "annotations": { "list": [] },
+      "editable": true,
+      "fiscalYearStartMonth": 0,
+      "graphTooltip": 0,
+      "id": null,
+      "links": [],
+      "liveNow": false,
+      "panels": [
+        {
+          "title": "PulseCity Log Ingestion Rate (lines/min)",
+          "type": "timeseries",
+          "gridPos": { "h": 6, "w": 12, "x": 0, "y": 0 },
+          "targets": [
+            {
+              "expr": "sum(count_over_time({namespace=\"pulsecity\"}[1m])) by (container)",
+              "legendFormat": "Container: {{container}}",
+              "refId": "A"
+            }
+          ]
+        },
+        {
+          "title": "Error & Warning Log Rate",
+          "type": "timeseries",
+          "gridPos": { "h": 6, "w": 12, "x": 12, "y": 0 },
+          "targets": [
+            {
+              "expr": "sum(count_over_time({namespace=\"pulsecity\"} |~ \"(?i)error|fail|warn|50[0-9]\"[1m])) by (container)",
+              "legendFormat": "Errors: {{container}}",
+              "refId": "A"
+            }
+          ]
+        },
+        {
+          "title": "Backend Express & Socket.io Application Logs",
+          "type": "logs",
+          "gridPos": { "h": 10, "w": 24, "x": 0, "y": 6 },
+          "targets": [
+            {
+              "expr": "{namespace=\"pulsecity\", container=\"backend\"}",
+              "legendFormat": "Backend",
+              "refId": "A"
+            }
+          ],
+          "options": {
+            "showLabels": true,
+            "wrapLogMessage": true,
+            "enableLogDetails": true
+          }
+        },
+        {
+          "title": "Frontend Nginx Container Access & Error Logs",
+          "type": "logs",
+          "gridPos": { "h": 10, "w": 24, "x": 0, "y": 16 },
+          "targets": [
+            {
+              "expr": "{namespace=\"pulsecity\", container=\"frontend\"}",
+              "legendFormat": "Frontend",
+              "refId": "A"
+            }
+          ],
+          "options": {
+            "showLabels": true,
+            "wrapLogMessage": true,
+            "enableLogDetails": true
+          }
+        }
+      ],
+      "refresh": "10s",
+      "schemaVersion": 38,
+      "style": "dark",
+      "tags": ["pulsecity", "loki", "logging"],
+      "time": { "from": "now-1h", "to": "now" },
+      "title": "PulseCity Centralized Logging Dashboard",
+      "uid": "pulsecity-centralized-logging"
+    }

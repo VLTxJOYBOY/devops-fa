@@ -1,0 +1,86 @@
+.map-view {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 40px 24px;
+}
+
+.map-header {
+    margin-bottom: 24px;
+}
+
+.map-header h1 {
+    font-size: 32px;
+    font-weight: 700;
+    color: #1a202c;
+    margin-bottom: 8px;
+}
+
+.map-header p {
+    font-size: 16px;
+    color: #718096;
+    font-weight: 500;
+}
+
+.map-container {
+    height: 600px;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+    border: 2px solid #e2e8f0;
+}
+
+.popup-content {
+    padding: 4px;
+}
+
+.popup-content h3 {
+    font-size: 16px;
+    font-weight: 700;
+    color: #1a202c;
+    margin: 0 0 8px 0;
+}
+
+.popup-category {
+    font-size: 12px;
+    color: #718096;
+    margin: 0 0 8px 0;
+    font-weight: 500;
+}
+
+.popup-description {
+    font-size: 13px;
+    color: #4a5568;
+    margin: 0 0 8px 0;
+    line-height: 1.5;
+}
+
+.popup-status {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 700;
+    color: white;
+    margin-bottom: 8px;
+}
+
+.popup-upvotes {
+    font-size: 12px;
+    color: #2d3748;
+    margin: 8px 0 0 0;
+    font-weight: 600;
+}
+
+@media (max-width: 768px) {
+    .map-view {
+        padding: 24px 16px;
+    }
+
+    .map-header h1 {
+        font-size: 24px;
+    }
+
+    .map-container {
+        height: 500px;
+    }
+}

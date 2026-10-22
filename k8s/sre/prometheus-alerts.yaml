@@ -1,0 +1,60 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-alerts
+  namespace: monitoring
+  labels:
+    app.kubernetes.io/name: prometheus
+    app.kubernetes.io/component: alerting
+data:
+  alerts.yml: |
+    groups:
+      - name: pulsecity-sre-alerts
+        rules:
+          - alert: BackendDown
+            expr: up{job="pulsecity-backend"} == 0
+            for: 2m
+            labels:
+              alertname: BackendDown
+              severity: critical
+              service: pulsecity-backend
+            annotations:
+              summary: "PulseCity backend service is unavailable"
+              description: "Prometheus scrape for target 'pulsecity-backend' has been failing (up == 0) for more than 2 minutes."
+              runbook: "Inspect PulseCity backend pod health (`kubectl get pods -n pulsecity`), check deployment status, view pod logs via Loki or `kubectl logs`, and verify Node.js process state."
+
+          - alert: HighErrorRate
+            expr: (sum(rate(http_requests_total{status_code=~"5.."}[5m])) / sum(rate(http_requests_total[5m]))) * 100 > 1
+            for: 5m
+            labels:
+              alertname: HighErrorRate
+              severity: warning
+              service: pulsecity-backend
+            annotations:
+              summary: "PulseCity backend 5xx error rate exceeds 1% SLO threshold"
+              description: "The 5-minute HTTP 5xx server error rate is currently {{ $value | printf \"%.2f\" }}%, violating the internal SLO target of < 1%."
+              runbook: "Filter Loki logs for error level (`{namespace=\"pulsecity\", app=\"pulsecity-backend\"} |= \"error\"`), check MongoDB database connectivity, and review recent deployment changes."
+
+          - alert: HighLatency
+            expr: histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket[5m])) by (le)) > 0.5
+            for: 5m
+            labels:
+              alertname: HighLatency
+              severity: warning
+              service: pulsecity-backend
+            annotations:
+              summary: "PulseCity backend p95 request latency exceeds 500ms SLO target"
+              description: "The 95th percentile HTTP request duration is {{ $value | printf \"%.3f\" }} seconds over the last 5 minutes, exceeding the 500ms (0.5s) SLO target."
+              runbook: "Review Node.js CPU and memory utilization in Grafana, evaluate database query execution times, and inspect active concurrent connection counts."
+
+          - alert: HighActiveRequests
+            expr: http_active_requests > 100
+            for: 3m
+            labels:
+              alertname: HighActiveRequests
+              severity: warning
+              service: pulsecity-backend
+            annotations:
+              summary: "PulseCity backend active concurrent request count is unusually high"
+              description: "The backend is currently processing {{ $value }} active concurrent requests (illustrative academic/demo threshold > 100). Note: This threshold must be calibrated using real production capacity and load testing."
+              runbook: "Check Node.js event-loop delay metrics, monitor incoming traffic spikes, and verify if upstream microservices or database queries are blocking resolution."

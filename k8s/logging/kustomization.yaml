@@ -1,0 +1,17 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: logging
+
+resources:
+  - namespace.yaml
+  - loki-config.yaml
+  - loki-deployment.yaml
+  - loki-service.yaml
+  - promtail-serviceaccount.yaml
+  - promtail-clusterrole.yaml
+  - promtail-clusterrolebinding.yaml
+  - promtail-config.yaml
+  - promtail-daemonset.yaml
+  - grafana-loki-datasource.yaml
+  - grafana-logging-dashboard.yaml

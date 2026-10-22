@@ -1,0 +1,2 @@
+[webserver]
+pulsecity ansible_host=13.235.95.91 ansible_user=ubuntu ansible_ssh_private_key_file=/home/sensei/pulsecity-key.pem

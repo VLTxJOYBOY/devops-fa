@@ -1,0 +1,90 @@
+================================================================================
+           PulseCity — COMPLETE RE-DEPLOYMENT STEPS (DESTROY TO RE-CREATE)
+================================================================================
+
+CONCEPT EXPLANATION:
+--------------------------------------------------------------------------------
+Q: If I run 'terraform destroy', do I need to rebuild Docker images?
+A: NO! Your Docker images are safely hosted on GitHub Container Registry (GHCR):
+   - ghcr.io/vltxjoyboy/pulsecity-backend:latest
+   - ghcr.io/vltxjoyboy/pulsecity-frontend:latest
+
+When you recreate the EC2 instance with Terraform and run Ansible, Ansible will
+automatically login to GHCR, pull the pre-built images, configure the backend
+environment variables, and start the application using Docker Compose!
+
+You ONLY need to rebuild Docker images if you modify the frontend/backend code.
+
+
+================================================================================
+STEP-BY-STEP RE-DEPLOYMENT PIPELINE (FOR DEMO / CLASSROOM)
+================================================================================
+
+--------------------------------------------------------------------------------
+STEP 1: DESTROY EXISTING TERRAFORM INFRASTRUCTURE (Optional reset)
+--------------------------------------------------------------------------------
+cd /home/sensei/PulseCity/terraform
+terraform destroy -auto-approve
+
+
+--------------------------------------------------------------------------------
+STEP 2: RE-CREATE EC2 INSTANCE WITH TERRAFORM
+--------------------------------------------------------------------------------
+cd /home/sensei/PulseCity/terraform
+terraform init
+terraform apply -auto-approve
+
+# Note the new EC2 Public IP address from output (e.g., 13.207.184.108):
+terraform output instance_public_ip
+
+
+--------------------------------------------------------------------------------
+STEP 3: UPDATE ANSIBLE INVENTORY WITH NEW IP
+--------------------------------------------------------------------------------
+1. Open inventory file:
+   nano /home/sensei/PulseCity/ansible/inventory
+
+2. Replace the IP with the new EC2 Public IP:
+   [webserver]
+   pulsecity ansible_host=<NEW_EC2_IP> ansible_user=ubuntu ansible_ssh_private_key_file=/home/sensei/pulsecity-key.pem
+
+3. Test connection (ping EC2 server):
+   cd /home/sensei/PulseCity/ansible
+   ansible webserver -i inventory -m ping
+   (Expect: pulsecity | SUCCESS => { "ping": "pong" })
+
+
+--------------------------------------------------------------------------------
+STEP 4: AUTOMATED DEPLOYMENT USING ANSIBLE (RECOMMENDED)
+--------------------------------------------------------------------------------
+Ansible will configure Docker, login to GHCR, setup environment secrets,
+pull pre-built Docker containers, and start everything automatically.
+
+cd /home/sensei/PulseCity/ansible
+ansible-playbook -i inventory deploy.yml --extra-vars "@secrets.yml"
+
+
+--------------------------------------------------------------------------------
+OPTIONAL: REBUILD & PUSH DOCKER IMAGES (Only if code was modified)
+--------------------------------------------------------------------------------
+If you edited backend/frontend code locally and want to update the GHCR images:
+
+cd /home/sensei/PulseCity
+echo "<YOUR_GITHUB_TOKEN>" | docker login ghcr.io -u vltxjoyboy --password-stdin
+docker build -t ghcr.io/vltxjoyboy/pulsecity-backend:latest ./backend
+docker build -t ghcr.io/vltxjoyboy/pulsecity-frontend:latest ./frontend
+docker push ghcr.io/vltxjoyboy/pulsecity-backend:latest
+docker push ghcr.io/vltxjoyboy/pulsecity-frontend:latest
+
+
+--------------------------------------------------------------------------------
+STEP 5: VERIFY FULLY WORKING APPLICATION
+--------------------------------------------------------------------------------
+1. Access in Browser:
+   Frontend Application: http://<NEW_EC2_IP> or http://<NEW_EC2_IP>:3000
+   Backend API:          http://<NEW_EC2_IP>/api/issues
+
+2. Verify via Terminal:
+   curl -I http://<NEW_EC2_IP>/
+   curl -s http://<NEW_EC2_IP>/api/issues
+================================================================================

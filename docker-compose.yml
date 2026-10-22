@@ -1,0 +1,22 @@
+services:
+
+  backend:
+    build: ./backend
+    image: ghcr.io/vltxjoyboy/pulsecity-backend:latest
+    container_name: pulsecity-backend
+    env_file:
+      - ./backend/.env
+    ports:
+      - "5000:5000"
+    restart: unless-stopped
+
+  frontend:
+    build: ./frontend
+    image: ghcr.io/vltxjoyboy/pulsecity-frontend:latest
+    container_name: pulsecity-frontend
+    ports:
+      - "80:80"
+      - "3000:80"
+    depends_on:
+      - backend
+    restart: unless-stopped

@@ -1,0 +1,178 @@
+name: PulseCity CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  backend-test:
+    name: Backend Test Suite
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install Backend Dependencies
+        working-directory: ./backend
+        run: npm ci
+
+      - name: Run Backend Tests
+        working-directory: ./backend
+        run: npm test
+
+  frontend-lint-and-build:
+    name: Frontend Lint & Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install Frontend Dependencies
+        working-directory: ./frontend
+        run: npm ci
+
+      - name: Run Frontend Linter
+        working-directory: ./frontend
+        run: npm run lint
+
+      - name: Build Frontend Production Bundle
+        working-directory: ./frontend
+        run: npm run build
+
+  security-scan:
+    name: Security & Vulnerability Audit
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Backend Security Audit
+        working-directory: ./backend
+        run: npm audit --audit-level=high || true
+
+      - name: Frontend Security Audit
+        working-directory: ./frontend
+        run: npm audit --audit-level=high || true
+
+      - name: Trivy Vulnerability Scan (Filesystem)
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'table'
+          severity: 'HIGH,CRITICAL'
+          exit-code: '0'
+
+  docker-build-push:
+    name: Docker Build & Push to GHCR
+    needs: [backend-test, frontend-lint-and-build, security-scan]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry (GHCR)
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and Push Backend Image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./backend
+          file: ./backend/Dockerfile
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: |
+            ghcr.io/vltxjoyboy/pulsecity-backend:latest
+            ghcr.io/vltxjoyboy/pulsecity-backend:${{ github.sha }}
+
+      - name: Build and Push Frontend Image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./frontend
+          file: ./frontend/Dockerfile
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: |
+            ghcr.io/vltxjoyboy/pulsecity-frontend:latest
+            ghcr.io/vltxjoyboy/pulsecity-frontend:${{ github.sha }}
+
+  deploy-kubernetes:
+    name: Continuous Deployment to Kubernetes
+    needs: [backend-test, frontend-lint-and-build, security-scan, docker-build-push]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: [self-hosted, Linux, X64, pulsecity-k3s]
+    env:
+      KUBECONFIG: /home/ubuntu/.kube/config
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Verify Kubernetes Access
+        run: |
+          kubectl get nodes
+          kubectl get deployments -n pulsecity
+          kustomize version
+
+      - name: Update Kustomize Image Tags to Immutable Git SHA
+        run: |
+          cd k8s
+          kustomize edit set image ghcr.io/vltxjoyboy/pulsecity-backend=ghcr.io/vltxjoyboy/pulsecity-backend:${{ github.sha }}
+          kustomize edit set image ghcr.io/vltxjoyboy/pulsecity-frontend=ghcr.io/vltxjoyboy/pulsecity-frontend:${{ github.sha }}
+
+      - name: Apply Kubernetes Manifests
+        run: |
+          kubectl apply -k k8s/
+
+      - name: Verify Backend Rollout Status
+        run: |
+          kubectl rollout status deployment/pulsecity-backend -n pulsecity --timeout=180s
+
+      - name: Verify Frontend Rollout Status
+        run: |
+          kubectl rollout status deployment/pulsecity-frontend -n pulsecity --timeout=180s
+
+      - name: Inspect Cluster Pod Status
+        if: always()
+        run: |
+          kubectl get pods -n pulsecity -o wide

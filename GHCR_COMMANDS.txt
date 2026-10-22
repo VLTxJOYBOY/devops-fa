@@ -1,0 +1,82 @@
+================================================================================
+  PulseCity — GHCR Docker & Automated Redeployment Master Guide (Final Boss)
+  GitHub Container Registry: ghcr.io/vltxjoyboy
+================================================================================
+
+IMPORTANT NOTE ON TERRAFORM DESTROY:
+--------------------------------------------------------------------------------
+If you run `terraform destroy`, AWS deletes the EC2 instance.
+YOU DO NOT NEED TO REBUILD DOCKER IMAGES unless you changed the application code!
+Your pre-built Docker images are stored safely in GHCR (ghcr.io/vltxjoyboy).
+
+When you re-run `terraform apply` and run the Ansible playbook, Ansible automatically
+pulls the ready-to-run images directly from GHCR and starts the full application!
+
+================================================================================
+PART A: QUICK 3-STEP REDEPLOYMENT (If Terraform was Destroyed)
+================================================================================
+
+Step 1 — Provision New EC2 Instance with Terraform:
+--------------------------------------------------
+cd /home/sensei/PulseCity/terraform
+terraform apply -auto-approve
+
+# Note the new Public IP printed at the end (e.g. 13.207.184.108)
+
+Step 2 — Update Ansible Inventory:
+----------------------------------
+Edit /home/sensei/PulseCity/ansible/inventory:
+[webserver]
+pulsecity ansible_host=<NEW_EC2_IP> ansible_user=ubuntu ansible_ssh_private_key_file=/home/sensei/pulsecity-key.pem
+
+Step 3 — Deploy Everything automatically via Ansible:
+----------------------------------------------------
+cd /home/sensei/PulseCity/ansible
+ansible-playbook -i inventory deploy.yml --extra-vars "@secrets.yml"
+
+Done! Access your app at: http://<NEW_EC2_IP> or http://<NEW_EC2_IP>:3000
+
+
+================================================================================
+PART B: BUILDING & PUSHING NEW DOCKER IMAGES TO GHCR (If Code Changes)
+================================================================================
+
+1. Login to GitHub Container Registry:
+--------------------------------------
+echo "<YOUR_GITHUB_TOKEN>" | docker login ghcr.io -u vltxjoyboy --password-stdin
+
+2. Build Universal Container Images locally:
+--------------------------------------------
+(Note: Thanks to our Nginx reverse-proxy setup, the frontend uses relative /api routing.
+ You do NOT need to hardcode EC2 IPs during build!)
+
+cd /home/sensei/PulseCity
+
+# Build Backend:
+docker build -t ghcr.io/vltxjoyboy/pulsecity-backend:latest ./backend
+
+# Build Frontend:
+docker build -t ghcr.io/vltxjoyboy/pulsecity-frontend:latest ./frontend
+
+3. Push Images to GHCR:
+-----------------------
+docker push ghcr.io/vltxjoyboy/pulsecity-backend:latest
+docker push ghcr.io/vltxjoyboy/pulsecity-frontend:latest
+
+4. (Optional) Cleanup local images/cache:
+------------------------------------------
+docker image prune -f
+
+
+================================================================================
+PART C: ONE-LINE COPY-PASTE RE-BUILD & DEPLOYMENT PIPELINE
+================================================================================
+
+cd /home/sensei/PulseCity && \
+echo "<YOUR_GITHUB_TOKEN>" | docker login ghcr.io -u vltxjoyboy --password-stdin && \
+docker build -t ghcr.io/vltxjoyboy/pulsecity-backend:latest ./backend && \
+docker build -t ghcr.io/vltxjoyboy/pulsecity-frontend:latest ./frontend && \
+docker push ghcr.io/vltxjoyboy/pulsecity-backend:latest && \
+docker push ghcr.io/vltxjoyboy/pulsecity-frontend:latest
+================================================================================
+  
