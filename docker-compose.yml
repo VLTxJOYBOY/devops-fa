@@ -2,7 +2,7 @@ services:
 
   backend:
     build: ./backend
-    image: ghcr.io/vltxjoyboy/pulsecity-backend:latest
+    image: pulsecity-backend:latest
     container_name: pulsecity-backend
     env_file:
       - ./backend/.env
@@ -12,11 +12,36 @@ services:
 
   frontend:
     build: ./frontend
-    image: ghcr.io/vltxjoyboy/pulsecity-frontend:latest
+    image: pulsecity-frontend:latest
     container_name: pulsecity-frontend
     ports:
       - "80:80"
-      - "3000:80"
     depends_on:
       - backend
+    restart: unless-stopped
+
+  prometheus:
+    image: prom/prometheus:v2.50.0
+    container_name: pulsecity-prometheus
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+    ports:
+      - "9090:9090"
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:10.4.0
+    container_name: pulsecity-grafana
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - ./monitoring/grafana-datasource.yaml:/etc/grafana/provisioning/datasources/datasource.yaml
+      - ./monitoring/grafana-dashboard-provider.yaml:/etc/grafana/provisioning/dashboards/provider.yaml
+      - ./monitoring/dashboards:/var/lib/grafana/dashboards
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
     restart: unless-stopped
