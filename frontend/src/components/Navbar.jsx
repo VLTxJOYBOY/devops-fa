@@ -15,45 +15,62 @@ const Navbar = () => {
 
     if (!user) return null;
 
+    const userInitial = user.username ? user.username.charAt(0).toUpperCase() : 'U';
+
     return (
-        <nav className="navbar">
-            <div className="navbar-container">
-                <Link to="/" className="navbar-logo">
-                    <span className="logo-icon">🏛️</span>
-                    PulseCity
+        <header className="navbar-wrapper">
+            <nav className="navbar-dock">
+                <Link to="/" className="navbar-brand">
+                    <div className="brand-icon-box">
+                        <span className="brand-bolt">⚡</span>
+                    </div>
+                    <div className="brand-text-group">
+                        <span className="brand-title">PulseCity</span>
+                        <span className="brand-sub"><span className="live-dot"></span>CIVIC INTELLIGENCE</span>
+                    </div>
                 </Link>
 
-                <div className="navbar-links">
+                <div className="navbar-nav-links">
                     <Link
                         to="/"
-                        className={location.pathname === '/' ? 'active' : ''}
+                        className={`nav-pill ${location.pathname === '/' ? 'active' : ''}`}
                     >
-                        📋 List View
+                        <span className="nav-icon">📊</span>
+                        <span className="nav-label">Live Feed</span>
                     </Link>
                     <Link
                         to="/map"
-                        className={location.pathname === '/map' ? 'active' : ''}
+                        className={`nav-pill ${location.pathname === '/map' ? 'active' : ''}`}
                     >
-                        🗺️ Map View
+                        <span className="nav-icon">🗺️</span>
+                        <span className="nav-label">Geo Radar</span>
                     </Link>
                     <Link
                         to="/report"
-                        className={location.pathname === '/report' ? 'active' : ''}
+                        className={`nav-pill highlight ${location.pathname === '/report' ? 'active' : ''}`}
                     >
-                        ➕ Report Issue
+                        <span className="nav-icon">⚡</span>
+                        <span className="nav-label">Report Issue</span>
                     </Link>
                 </div>
 
-                <div className="navbar-user">
-                    <span className="user-role">
-                        {user.role === 'admin' ? ' Admin' : '👤 User'}
-                    </span>
-                    <button onClick={handleLogout} className="logout-btn">
-                        Logout
+                <div className="navbar-profile-section">
+                    <div className="profile-badge">
+                        <div className="avatar-disc">{userInitial}</div>
+                        <div className="user-details">
+                            <span className="username-text">{user.username || 'Citizen'}</span>
+                            <span className={`role-tag ${user.role === 'representative' ? 'rep' : 'citizen'}`}>
+                                {user.role === 'representative' ? 'Official' : 'Citizen'}
+                            </span>
+                        </div>
+                    </div>
+                    <button onClick={handleLogout} className="btn-logout" title="Sign out">
+                        <span className="logout-icon">⏻</span>
+                        <span className="logout-text">Exit</span>
                     </button>
                 </div>
-            </div>
-        </nav>
+            </nav>
+        </header>
     );
 };
 
