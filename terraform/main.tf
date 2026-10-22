@@ -10,7 +10,7 @@ terraform {
 }
 
 provider "aws" {
-  region = "ap-south-1"
+  region = "ap-southeast-2"
 }
 
 # Find the latest Ubuntu 24.04 LTS AMI
