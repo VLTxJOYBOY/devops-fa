@@ -6,6 +6,7 @@ import Auth from './pages/Auth';
 import ListView from './pages/ListView';
 import MapView from './pages/MapView';
 import ReportIssue from './pages/ReportIssue';
+import GrafanaDashboard from './pages/GrafanaDashboard';
 import './App.css';
 
 // Protected Route Component
@@ -52,6 +53,14 @@ function App() {
               element={
                 <ProtectedRoute>
                   <ReportIssue />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/grafana"
+              element={
+                <ProtectedRoute>
+                  <GrafanaDashboard />
                 </ProtectedRoute>
               }
             />

@@ -146,6 +146,18 @@
     box-shadow: 0 0 20px rgba(0, 240, 255, 0.45);
 }
 
+.nav-pill.grafana-pill:hover {
+    color: #f97316;
+    background: rgba(249, 115, 22, 0.1);
+}
+
+.nav-pill.grafana-pill.active {
+    color: #ea580c;
+    background: rgba(249, 115, 22, 0.15);
+    border: 1px solid rgba(249, 115, 22, 0.4);
+    box-shadow: 0 0 16px rgba(249, 115, 22, 0.25);
+}
+
 /* User & Logout */
 .navbar-profile-section {
     display: flex;

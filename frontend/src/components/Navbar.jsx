@@ -35,7 +35,7 @@ const Navbar = () => {
                         to="/"
                         className={`nav-pill ${location.pathname === '/' ? 'active' : ''}`}
                     >
-                        <span className="nav-icon">📊</span>
+                        <span className="nav-icon">📋</span>
                         <span className="nav-label">Live Feed</span>
                     </Link>
                     <Link
@@ -51,6 +51,13 @@ const Navbar = () => {
                     >
                         <span className="nav-icon">⚡</span>
                         <span className="nav-label">Report Issue</span>
+                    </Link>
+                    <Link
+                        to="/grafana"
+                        className={`nav-pill grafana-pill ${location.pathname === '/grafana' ? 'active' : ''}`}
+                    >
+                        <span className="nav-icon">📊</span>
+                        <span className="nav-label">Grafana / SRE</span>
                     </Link>
                 </div>
 
