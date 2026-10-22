@@ -1,9 +1,14 @@
 const express = require('express');
 const cors = require('cors');
 const mongoose = require('mongoose');
+const path = require('path');
 const { metricsMiddleware, register } = require('../middleware/metrics');
 
 const authRoutes = require('../routes/authRoutes');
+const imageRoutes = require('../routes/imageRoutes');
+const favoriteRoutes = require('../routes/favoriteRoutes');
+const collectionRoutes = require('../routes/collectionRoutes');
+const userRoutes = require('../routes/userRoutes');
 const issueRoutes = require('../routes/issueRoutes');
 
 const app = express();
@@ -11,6 +16,8 @@ const app = express();
 app.use(metricsMiddleware);
 app.use(cors());
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')));
 
 // Health Check Endpoint
 app.get('/health', (req, res) => {
@@ -49,6 +56,10 @@ const mockIo = {
 app.set('io', mockIo);
 
 app.use('/api/auth', authRoutes);
+app.use('/api/images', imageRoutes);
+app.use('/api/favorites', favoriteRoutes);
+app.use('/api/collections', collectionRoutes);
+app.use('/api/users', userRoutes);
 app.use('/api/issues', issueRoutes);
 
 // Global Error Handler matching server.js
@@ -61,4 +72,3 @@ app.use((err, req, res, next) => {
 });
 
 module.exports = app;
-

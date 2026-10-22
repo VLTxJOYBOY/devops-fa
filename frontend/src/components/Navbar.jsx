@@ -1,84 +1,136 @@
-import { useContext } from 'react';
+import { useState, useContext } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { AuthContext } from '../utils/AuthContext';
-import './Navbar.css';
+import { Camera, Search, UploadCloud, Heart, Bookmark, User, LogOut, Menu, X } from 'lucide-react';
 
-const Navbar = () => {
-    const { user, logoutUser } = useContext(AuthContext);
-    const navigate = useNavigate();
-    const location = useLocation();
+export default function Navbar() {
+  const { user, isAuthenticated, logout } = useContext(AuthContext);
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [searchQuery, setSearchQuery] = useState('');
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-    const handleLogout = () => {
-        logoutUser();
-        navigate('/auth');
-    };
+  const handleSearchSubmit = (e) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      navigate(`/?q=${encodeURIComponent(searchQuery.trim())}`);
+    } else {
+      navigate('/');
+    }
+  };
 
-    if (!user) return null;
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
+  };
 
-    const userInitial = user.username ? user.username.charAt(0).toUpperCase() : 'U';
+  return (
+    <header className="navbar">
+      <div className="navbar-container">
+        {/* Brand */}
+        <Link to="/" className="nav-brand" onClick={() => setSearchQuery('')}>
+          <div className="brand-icon-wrapper">
+            <Camera size={20} strokeWidth={2.5} />
+          </div>
+          <span>Pixora</span>
+        </Link>
 
-    return (
-        <header className="navbar-wrapper">
-            <nav className="navbar-dock">
-                <Link to="/" className="navbar-brand">
-                    <div className="brand-icon-box">
-                        <span className="brand-bolt">⚡</span>
-                    </div>
-                    <div className="brand-text-group">
-                        <span className="brand-title">PulseCity</span>
-                        <span className="brand-sub"><span className="live-dot"></span>CIVIC INTELLIGENCE</span>
-                    </div>
-                </Link>
+        {/* Search Bar */}
+        <form className="nav-search-bar" onSubmit={handleSearchSubmit}>
+          <div className="nav-search-input-wrapper">
+            <Search size={18} color="#94a3b8" />
+            <input
+              type="text"
+              placeholder="Search high-res photography, styles, tags..."
+              className="nav-search-input"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
+        </form>
 
-                <div className="navbar-nav-links">
-                    <Link
-                        to="/"
-                        className={`nav-pill ${location.pathname === '/' ? 'active' : ''}`}
-                    >
-                        <span className="nav-icon">📋</span>
-                        <span className="nav-label">Live Feed</span>
-                    </Link>
-                    <Link
-                        to="/map"
-                        className={`nav-pill ${location.pathname === '/map' ? 'active' : ''}`}
-                    >
-                        <span className="nav-icon">🗺️</span>
-                        <span className="nav-label">Geo Radar</span>
-                    </Link>
-                    <Link
-                        to="/report"
-                        className={`nav-pill highlight ${location.pathname === '/report' ? 'active' : ''}`}
-                    >
-                        <span className="nav-icon">⚡</span>
-                        <span className="nav-label">Report Issue</span>
-                    </Link>
-                    <Link
-                        to="/grafana"
-                        className={`nav-pill grafana-pill ${location.pathname === '/grafana' ? 'active' : ''}`}
-                    >
-                        <span className="nav-icon">📊</span>
-                        <span className="nav-label">Grafana / SRE</span>
-                    </Link>
-                </div>
+        {/* Desktop Navigation Links */}
+        <nav className="nav-links" style={{ display: 'flex' }}>
+          <Link
+            to="/"
+            className={`nav-link ${location.pathname === '/' ? 'active' : ''}`}
+          >
+            Explore
+          </Link>
 
-                <div className="navbar-profile-section">
-                    <div className="profile-badge">
-                        <div className="avatar-disc">{userInitial}</div>
-                        <div className="user-details">
-                            <span className="username-text">{user.username || 'Citizen'}</span>
-                            <span className={`role-tag ${user.role === 'representative' ? 'rep' : 'citizen'}`}>
-                                {user.role === 'representative' ? 'Official' : 'Citizen'}
-                            </span>
-                        </div>
-                    </div>
-                    <button onClick={handleLogout} className="btn-logout" title="Sign out">
-                        <span className="logout-icon">⏻</span>
-                        <span className="logout-text">Exit</span>
-                    </button>
-                </div>
-            </nav>
-        </header>
-    );
-};
+          {isAuthenticated ? (
+            <>
+              <Link
+                to="/favorites"
+                className={`nav-link ${location.pathname === '/favorites' ? 'active' : ''}`}
+                title="Saved Favorites"
+              >
+                <Heart size={16} />
+                <span>Favorites</span>
+              </Link>
+              <Link
+                to="/collections"
+                className={`nav-link ${location.pathname.startsWith('/collections') ? 'active' : ''}`}
+                title="Personal Collections"
+              >
+                <Bookmark size={16} />
+                <span>Collections</span>
+              </Link>
+              <Link to="/upload" className="nav-btn-upload">
+                <UploadCloud size={16} />
+                <span>Submit Photo</span>
+              </Link>
+              <Link
+                to="/profile"
+                className="nav-avatar-btn"
+                title={`${user?.name} - Profile`}
+              >
+                <img
+                  src={
+                    user?.avatarUrl ||
+                    `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(user?.name || 'user')}`
+                  }
+                  alt={user?.name || 'Avatar'}
+                  className="nav-avatar-img"
+                />
+                <span className="nav-avatar-name">{user?.name?.split(' ')[0] || 'Profile'}</span>
+              </Link>
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="nav-link"
+                title="Log Out"
+                style={{ padding: '8px' }}
+              >
+                <LogOut size={16} />
+              </button>
+            </>
+          ) : (
+            <>
+              <Link
+                to="/login"
+                className={`nav-link ${location.pathname === '/login' ? 'active' : ''}`}
+              >
+                <User size={16} />
+                <span>Log In</span>
+              </Link>
+              <Link to="/register" className="nav-btn-upload">
+                <span>Join Free</span>
+              </Link>
+            </>
+          )}
+        </nav>
 
-export default Navbar;
+        {/* Mobile menu trigger button */}
+        <button
+          type="button"
+          className="mobile-menu-btn"
+          style={{ display: 'none', color: '#f8fafc' }}
+          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+        >
+          {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+        </button>
+      </div>
+    </header>
+  );
+}

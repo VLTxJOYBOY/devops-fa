@@ -1,72 +1,105 @@
 import { useContext } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, AuthContext } from './utils/AuthContext';
+import { ToastProvider } from './utils/ToastContext';
 import Navbar from './components/Navbar';
-import Auth from './pages/Auth';
-import ListView from './pages/ListView';
-import MapView from './pages/MapView';
-import ReportIssue from './pages/ReportIssue';
-import GrafanaDashboard from './pages/GrafanaDashboard';
+import Footer from './components/Footer';
+
+// Pages
+import Explore from './pages/Explore';
+import Login from './pages/Login';
+import Register from './pages/Register';
+import ImageDetail from './pages/ImageDetail';
+import UploadImage from './pages/UploadImage';
+import Profile from './pages/Profile';
+import Favorites from './pages/Favorites';
+import Collections from './pages/Collections';
+import CollectionDetail from './pages/CollectionDetail';
+
 import './App.css';
 
 // Protected Route Component
 const ProtectedRoute = ({ children }) => {
-  const { user, loading } = useContext(AuthContext);
+  const { isAuthenticated, loading } = useContext(AuthContext);
 
   if (loading) {
     return (
-      <div className="loading-container">
-        <div className="spinner"></div>
+      <div style={{ textAlign: 'center', padding: '100px 0' }}>
+        <div className="skeleton" style={{ width: '60px', height: '60px', borderRadius: '50%', margin: '0 auto 16px' }} />
+        <p style={{ color: '#94a3b8' }}>Verifying session...</p>
       </div>
     );
   }
 
-  return user ? children : <Navigate to="/auth" />;
+  return isAuthenticated ? children : <Navigate to="/login" replace />;
 };
 
 function App() {
   return (
     <AuthProvider>
-      <BrowserRouter>
-        <div className="app">
-          <Navbar />
-          <Routes>
-            <Route path="/auth" element={<Auth />} />
-            <Route
-              path="/"
-              element={
-                <ProtectedRoute>
-                  <ListView />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/map"
-              element={
-                <ProtectedRoute>
-                  <MapView />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/report"
-              element={
-                <ProtectedRoute>
-                  <ReportIssue />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/grafana"
-              element={
-                <ProtectedRoute>
-                  <GrafanaDashboard />
-                </ProtectedRoute>
-              }
-            />
-          </Routes>
-        </div>
-      </BrowserRouter>
+      <ToastProvider>
+        <BrowserRouter>
+          <div className="app-layout">
+            <Navbar />
+            <main className="main-content">
+              <Routes>
+                {/* 1. Explore page */}
+                <Route path="/" element={<Explore />} />
+
+                {/* 2. Login page */}
+                <Route path="/login" element={<Login />} />
+                <Route path="/auth" element={<Navigate to="/login" replace />} />
+
+                {/* 3. Registration page */}
+                <Route path="/register" element={<Register />} />
+
+                {/* 4. Image detail page */}
+                <Route path="/image/:id" element={<ImageDetail />} />
+
+                {/* 5. Upload image page (Protected) */}
+                <Route
+                  path="/upload"
+                  element={
+                    <ProtectedRoute>
+                      <UploadImage />
+                    </ProtectedRoute>
+                  }
+                />
+
+                {/* 6. Profile and uploads page */}
+                <Route path="/profile" element={<Profile />} />
+
+                {/* 7. Saved favorites page (Protected) */}
+                <Route
+                  path="/favorites"
+                  element={
+                    <ProtectedRoute>
+                      <Favorites />
+                    </ProtectedRoute>
+                  }
+                />
+
+                {/* 8. Collections overview page (Protected) */}
+                <Route
+                  path="/collections"
+                  element={
+                    <ProtectedRoute>
+                      <Collections />
+                    </ProtectedRoute>
+                  }
+                />
+
+                {/* 9. Individual collection details page */}
+                <Route path="/collections/:id" element={<CollectionDetail />} />
+
+                {/* Fallback route */}
+                <Route path="*" element={<Navigate to="/" replace />} />
+              </Routes>
+            </main>
+            <Footer />
+          </div>
+        </BrowserRouter>
+      </ToastProvider>
     </AuthProvider>
   );
 }

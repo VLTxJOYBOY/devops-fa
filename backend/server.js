@@ -1,5 +1,6 @@
 const express = require('express');
 const http = require('http');
+const path = require('path');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const { Server } = require('socket.io');
@@ -7,14 +8,18 @@ require('dotenv').config();
 
 const { metricsMiddleware, register } = require('./middleware/metrics');
 const authRoutes = require('./routes/authRoutes');
+const imageRoutes = require('./routes/imageRoutes');
+const favoriteRoutes = require('./routes/favoriteRoutes');
+const collectionRoutes = require('./routes/collectionRoutes');
+const userRoutes = require('./routes/userRoutes');
 const issueRoutes = require('./routes/issueRoutes');
 
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
     cors: {
-        origin: "*", // Allow all for simplicity in dev
-        methods: ["GET", "POST", "PUT"]
+        origin: "*",
+        methods: ["GET", "POST", "PUT", "DELETE", "PATCH"]
     }
 });
 
@@ -24,6 +29,8 @@ app.use(metricsMiddleware);
 // Core Middleware
 app.use(cors());
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Health Check Endpoint
 app.get('/health', (req, res) => {
@@ -58,8 +65,12 @@ app.get('/metrics', async (req, res) => {
 // Share io instance with routes
 app.set('io', io);
 
-// Routes
+// Pixora API Routes
 app.use('/api/auth', authRoutes);
+app.use('/api/images', imageRoutes);
+app.use('/api/favorites', favoriteRoutes);
+app.use('/api/collections', collectionRoutes);
+app.use('/api/users', userRoutes);
 app.use('/api/issues', issueRoutes);
 
 // Socket.io Connection
@@ -88,4 +99,3 @@ mongoose.connect(process.env.MONGO_URI)
         });
     })
     .catch(err => console.error('MongoDB Connection Error:', err));
-
