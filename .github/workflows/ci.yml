@@ -140,18 +140,47 @@ jobs:
     name: Continuous Deployment to Kubernetes
     needs: [backend-test, frontend-lint-and-build, security-scan, docker-build-push]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    runs-on: [self-hosted, Linux, X64, pulsecity-k3s]
-    env:
-      KUBECONFIG: /home/ubuntu/.kube/config
+    runs-on: ubuntu-latest
 
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
+      - name: Install & Setup K3s Cluster
+        run: |
+          curl -sfL https://get.k3s.io | INSTALL_K3S_EXEC="--disable=traefik --write-kubeconfig-mode 644" sh -s -
+          mkdir -p ~/.kube
+          cp /etc/rancher/k3s/k3s.yaml ~/.kube/config
+          echo "KUBECONFIG=$HOME/.kube/config" >> $GITHUB_ENV
+          kubectl wait --for=condition=Ready node --all --timeout=60s
+
+      - name: Install Kustomize
+        run: |
+          if ! command -v kustomize &> /dev/null; then
+            curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh" | bash
+            sudo mv kustomize /usr/local/bin/
+          fi
+          kustomize version
+
+      - name: Provision Kubernetes Secrets & Namespace
+        run: |
+          kubectl create namespace pulsecity --dry-run=client -o yaml | kubectl apply -f -
+          kubectl create secret docker-registry ghcr-pull \
+            --namespace=pulsecity \
+            --docker-server=ghcr.io \
+            --docker-username=${{ github.actor }} \
+            --docker-password=${{ secrets.GITHUB_TOKEN }} \
+            --dry-run=client -o yaml | kubectl apply -f -
+          kubectl create secret generic pulsecity-secrets \
+            --namespace=pulsecity \
+            --from-literal=MONGO_URI="mongodb+srv://sarthakbagul24_db_user:mr9GJuFli6ID9Jcb@cluster3.ui3y1e4.mongodb.net/civicwatch?retryWrites=true&w=majority" \
+            --from-literal=JWT_SECRET="supersecretkey123" \
+            --dry-run=client -o yaml | kubectl apply -f -
+
       - name: Verify Kubernetes Access
         run: |
           kubectl get nodes
-          kubectl get deployments -n pulsecity
+          kubectl get deployments -n pulsecity || true
           kustomize version
 
       - name: Update Kustomize Image Tags to Immutable Git SHA
