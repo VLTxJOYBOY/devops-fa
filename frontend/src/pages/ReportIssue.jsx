@@ -109,7 +109,7 @@ const ReportIssue = () => {
                 }));
                 setLocating(false);
             },
-            (err) => {
+            (_err) => {
                 // If denied or on local IP, provide a Nashik default
                 setFormData(prev => ({
                     ...prev,
